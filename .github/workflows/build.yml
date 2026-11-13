@@ -1067,11 +1067,31 @@ jobs:
           esac
 
           echo "自动选择 NTSync 补丁: ${NTSYNC_PATCH}.patch"
-          wget -q "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_base.patch"
-          wget -q "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/${NTSYNC_PATCH}.patch"
+          wget -q "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/${NTSYNC_PATCH}.patch" \
+            || { echo "::error::${NTSYNC_PATCH}.patch 下载失败"; exit 1; }
 
-          patch -p1 < "ntsync_base.patch"
-          patch -p1 < "${NTSYNC_PATCH}.patch"
+          # 上游 README：6.12 内核自带 ntsync 驱动，NTsync 所需补丁「仅打 android16-6.12.patch」。
+          # ntsync_base.patch 是「新建文件」格式，6.12 源码里同名文件已存在，打上去必然退出 1。
+          # 5.10/5.15/6.1/6.6 内核没有 ntsync，仍需 base 补丁提供完整实现。
+          if [[ "${{ inputs.kernel_version }}" != "6.12" ]]; then
+            wget -q "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_base.patch" \
+              || { echo "::error::ntsync_base.patch 下载失败"; exit 1; }
+            patch -p1 --forward < "ntsync_base.patch" \
+              || { echo "::error::ntsync_base.patch 应用失败"; exit 1; }
+          else
+            echo "6.12 内核已内置 ntsync 驱动，跳过 ntsync_base.patch"
+          fi
+
+          patch -p1 --forward < "${NTSYNC_PATCH}.patch" \
+            || { echo "::error::${NTSYNC_PATCH}.patch 应用失败"; exit 1; }
+
+          # 校验 NTSYNC 配置项可用，避免构建出不带 /dev/ntsync 的内核
+          if ! grep -q '^config NTSYNC$' drivers/misc/Kconfig; then
+            echo "::error::Kconfig 中未找到 NTSYNC 配置项"; exit 1
+          fi
+          if grep -A3 '^config NTSYNC$' drivers/misc/Kconfig | grep -q 'depends on BROKEN'; then
+            echo "::error::NTSYNC 仍受 BROKEN 限制"; exit 1
+          fi
 
           cd ..
 
