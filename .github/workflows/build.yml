@@ -1592,6 +1592,9 @@ jobs:
               sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
               sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
               sed -i '/KMI_SYMBOL_LIST_STRICT_MODE/d' ./common/build.config.gki.aarch64
+              # 保留全部导出符号：否则 vendor_dlkm 的 cfg80211/mac80211/qca_cld3
+              # 模块会因符号被 trim 掉而报 Unknown symbol，WiFi 起不来
+              sed -i -E 's/^([[:space:]]*trim_nonlisted_kmi[[:space:]]*=[[:space:]]*)True/\1False/' ./common/BUILD.bazel
 
               if [ -f "build/build.sh" ]; then
                 LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh CC="/usr/bin/ccache clang" || exit 1
