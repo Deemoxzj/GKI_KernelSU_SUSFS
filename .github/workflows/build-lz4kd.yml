@@ -1319,6 +1319,14 @@ jobs:
               'CONFIG_ZRAM_BACKEND_LZ4KD=y' \
               'CONFIG_ZRAM_DEF_COMP_LZ4KD=y' >> "$CONFIG_FILE"
             echo "[lz4kd-6.12] 已追加 ZRAM_BACKEND_LZ4KD / DEF_COMP_LZ4KD，移除不存在的 CRYPTO_LZ4K_OPLUS"
+
+            # ZRAM/ZSMALLOC 已编成内建(=y)，但 android16 的 modules.bzl 仍声明它们是
+            # 可加载模块，dist 打包找不到 zram.ko/zsmalloc.ko 会失败。移除这两个条目
+            # （原逻辑只在 android14/15 清理，未覆盖 android16）。
+            if [ -f "$KERNEL_ROOT/common/modules.bzl" ]; then
+              sed -i '/"drivers\/block\/zram\/zram\.ko",/d; /"mm\/zsmalloc\.ko",/d' "$KERNEL_ROOT/common/modules.bzl"
+              echo "[lz4kd-6.12] 已从 modules.bzl 移除 zram.ko / zsmalloc.ko 模块条目"
+            fi
           fi
 
       - name: 添加 BBG 防格机补丁
