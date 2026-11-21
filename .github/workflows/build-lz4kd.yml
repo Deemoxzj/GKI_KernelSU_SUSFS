@@ -1311,10 +1311,14 @@ jobs:
 
           # ===== 定制：6.12 追加 backend 开关与默认压缩算法 =====
           if [ "${{ inputs.kernel_version }}" = "6.12" ] && [ "${{ inputs.use_zram }}" = "true" ]; then
+            # 6.12 定制流程不打 lz4k_oplus.patch，内核 Kconfig 里没有
+            # CONFIG_CRYPTO_LZ4K_OPLUS 这个符号；config/zram.config 里的这行会让
+            # GKI defconfig 校验失败（actual '', expected 'y'）。这里移除它。
+            sed -i '/^CONFIG_CRYPTO_LZ4K_OPLUS=/d' "$CONFIG_FILE"
             printf '%s\n' \
               'CONFIG_ZRAM_BACKEND_LZ4KD=y' \
               'CONFIG_ZRAM_DEF_COMP_LZ4KD=y' >> "$CONFIG_FILE"
-            echo "[lz4kd-6.12] 已追加 ZRAM_BACKEND_LZ4KD / DEF_COMP_LZ4KD"
+            echo "[lz4kd-6.12] 已追加 ZRAM_BACKEND_LZ4KD / DEF_COMP_LZ4KD，移除不存在的 CRYPTO_LZ4K_OPLUS"
           fi
 
       - name: 添加 BBG 防格机补丁
