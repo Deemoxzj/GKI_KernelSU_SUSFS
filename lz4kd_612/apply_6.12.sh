@@ -40,9 +40,12 @@ fi
 # ---------------------------------------------------------------------------
 # 2) 华为 LZ4KD 编解码库 + 头文件（提供底层实现，无版本差异，直接 cp）
 # ---------------------------------------------------------------------------
-echo "--- [2/5] 华为 LZ4KD 库源码 ---"
+echo "--- [2/5] 华为 LZ4KD 库源码 + crypto 适配层 ---"
 cp -r "$SUKISU_PATCHES/other/zram/lz4k/include/linux/"* ./include/linux/
 cp -r "$SUKISU_PATCHES/other/zram/lz4k/lib/"* ./lib/
+# crypto/Makefile 补丁引用了 obj-$(CONFIG_CRYPTO_LZ4K/LZ4KD) += lz4k.o/lz4kd.o，
+# 必须把对应的 C 源文件也拷进 crypto/，否则报 "No rule to make target 'crypto/lz4k.o'"
+cp -r "$SUKISU_PATCHES/other/zram/lz4k/crypto/"* ./crypto/
 
 # ---------------------------------------------------------------------------
 # 3) 打 crypto/lib/module 补丁（6.6 原补丁，实测 6.12 可打）
